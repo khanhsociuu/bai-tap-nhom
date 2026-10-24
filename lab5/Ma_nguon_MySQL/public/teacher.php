@@ -1,0 +1,29 @@
+<?php
+require __DIR__.'/../src/Web.php';require __DIR__.'/../src/TeacherService.php';require __DIR__.'/../src/StudentStats.php';
+$a=requireAuth();if($a['role']==='student') failure('Chỉ giảng viên và quản trị viên',403);
+$c=db();$error='';
+if($_SERVER['REQUEST_METHOD']==='POST') {
+ verifyCsrf();
+ try {
+  switch((string)($_POST['action']??'')) {
+   case 'add_topic': $name=trim((string)($_POST['name']??''));if($name===''||strlen($name)>100)throw new InvalidArgumentException('Tên không hợp lệ');queryParams($c,'INSERT INTO topics(name) VALUES($1) ON CONFLICT(name) DO NOTHING',[$name]);message('Đã thêm chủ đề');break;
+   case 'add_level': $name=trim((string)($_POST['name']??''));if($name===''||strlen($name)>60)throw new InvalidArgumentException('Tên không hợp lệ');queryParams($c,'INSERT INTO levels(name) VALUES($1) ON CONFLICT(name) DO NOTHING',[$name]);message('Đã thêm mức độ');break;
+   case 'create':$id=createProblem($c,$a,$_POST);message('Đã tạo bài #'.$id);break;
+   case 'publish':$id=(int)($_POST['id']??0);if(!canManageProblem($c,$a,$id))throw new InvalidArgumentException('Không có quyền');queryParams($c,'UPDATE problems SET published=NOT published WHERE id=$1',[$id]);message('Đã đổi trạng thái hiển thị');break;
+   default: throw new InvalidArgumentException('Thao tác không hợp lệ');
+  }
+  gotoPath('/teacher.php');
+ } catch(Throwable $e) {$error=$e instanceof InvalidArgumentException?$e->getMessage():'Lỗi lưu dữ liệu, kiểm tra slug và các mã';}
+}
+$topics=rows($c,'SELECT * FROM topics ORDER BY id');$levels=rows($c,'SELECT * FROM levels ORDER BY id');
+$p=rows($c,'SELECT p.id,p.title,p.published,pv.version_no,sv.version_no suite_no
+ FROM problems p LEFT JOIN problem_versions pv ON pv.id=p.current_version_id
+ LEFT JOIN test_suite_versions sv ON sv.id=p.current_suite_id WHERE p.created_by=$1 OR $2=\'admin\' ORDER BY p.id DESC',[$a['id'],$a['role']]);
+$progress=(new StudentStats($c))->byTeacher((int)$a['id'],$a['role']);
+layoutStart('Quản lý giảng viên'); ?>
+<h1 class="page-title">Quản lý bài tập</h1><p class="muted">Thêm bài, cập nhật phiên bản đề và bộ chấm. Các phiên bản đã dùng được giữ nguyên.</p>
+<?php if($error):?><div class="error"><?=h($error)?></div><?php endif; ?>
+<div class="table-holder"><table><thead><tr><th>ID</th><th>Bài</th><th>Đề</th><th>Test</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody><?php foreach($p as $x):?><tr><td>#<?=h($x['id'])?></td><td><?=h($x['title'])?></td><td>v<?=h($x['version_no'])?></td><td>v<?=h($x['suite_no'])?></td><td><?=($x['published']==='t'?'Công khai':'Đã ẩn')?></td><td><a href="/teacher_edit.php?id=<?=h($x['id'])?>">Sửa đề</a> · <a href="/suite.php?id=<?=h($x['id'])?>">Bộ test</a><form method="post" class="inline"><input type="hidden" name="csrf" value="<?=h(csrf())?>"><input type="hidden" name="action" value="publish"><input type="hidden" name="id" value="<?=h($x['id'])?>"><button class="linkbtn"><?=($x['published']==='t'?'Ẩn':'Hiện')?></button></form></td></tr><?php endforeach; ?></tbody></table></div>
+<div class="grid2"><section class="panel"><h2>Tạo bài tập mới</h2><p class="tiny muted">Mỗi bài yêu cầu ít nhất 5 ca kiểm thử. Dữ liệu kín chỉ lưu tại PostgreSQL.</p><form method="post" class="stack"><input type="hidden" name="csrf" value="<?=h(csrf())?>"><input type="hidden" name="action" value="create"><label>Tên bài<input required name="title" maxlength="160"></label><label>Slug<input required name="slug" pattern="[a-z0-9_-]{3,120}" placeholder="tong_hai_so"></label><div class="grid2 compact"><label>Chủ đề<select name="topic_id"><?php foreach($topics as $v): ?><option value="<?=h($v['id'])?>"><?=h($v['name'])?></option><?php endforeach; ?></select></label><label>Mức độ<select name="level_id"><?php foreach($levels as $v): ?><option value="<?=h($v['id'])?>"><?=h($v['name'])?></option><?php endforeach; ?></select></label></div><label>Đề bài<textarea required name="statement" rows="4"></textarea></label><label>Mô tả đầu vào<textarea name="input_desc" required rows="2"></textarea></label><label>Mô tả đầu ra<textarea name="output_desc" required rows="2"></textarea></label><div class="grid2 compact"><label>Input ví dụ<textarea name="sample_input" rows="2"></textarea></label><label>Output ví dụ<textarea name="sample_output" rows="2"></textarea></label></div><div class="grid2 compact"><label>Thời gian (ms)<input type="number" name="time_limit_ms" value="1500" min="100" max="5000"></label><label>Bộ nhớ (MB)<input type="number" name="memory_limit_mb" value="128" min="32" max="256"></label></div><label>Bộ test JSON (5–50 ca)<textarea name="tests" rows="6" required placeholder='[{"input":"1 2\n","output":"3\n"}, ...]'></textarea></label><button class="btn">Tạo bài & lưu PostgreSQL</button></form></section>
+<section class="stack"><div class="panel"><h2>Thêm chủ đề / mức độ</h2><form method="post" class="rowform"><input type="hidden" name="csrf" value="<?=h(csrf())?>"><input type="hidden" name="action" value="add_topic"><input required name="name" placeholder="Tên chủ đề"><button class="btn secondary">Thêm chủ đề</button></form><form method="post" class="rowform"><input type="hidden" name="csrf" value="<?=h(csrf())?>"><input type="hidden" name="action" value="add_level"><input required name="name" placeholder="Tên mức độ"><button class="btn secondary">Thêm mức độ</button></form></div><div class="panel"><h2>Tiến độ người học</h2><div class="table-holder"><table><thead><tr><th>Lớp</th><th>Người học</th><th>Bài AC</th><th>Số lượt nộp</th></tr></thead><tbody><?php foreach($progress as $x):?><tr><td><?=h($x['classroom'])?></td><td><?=h($x['display_name'])?> <small>@<?=h($x['username'])?></small></td><td><?=h($x['solved'])?></td><td><?=h($x['submissions'])?></td></tr><?php endforeach; ?></tbody></table></div></div></section></div>
+<?php layoutEnd(); ?>

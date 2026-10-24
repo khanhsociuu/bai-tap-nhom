@@ -1,0 +1,5 @@
+.local/
+.runtime/
+*.log
+.DS_Store
+private_seed/
