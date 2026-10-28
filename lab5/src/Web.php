@@ -8,6 +8,28 @@ if (PHP_SAPI!=='cli') {
     header('Referrer-Policy: strict-origin-when-cross-origin');
     header('X-Frame-Options: DENY');
 }
+if (PHP_SAPI!=='cli') {
+    // Return a safe response rather than a blank HTTP 500 on unexpected page errors.
+    // Full diagnostic stays in the server terminal, never in the browser.
+    set_exception_handler(static function(Throwable $e):void {
+        $ref=bin2hex(random_bytes(4));
+        error_log('[DNU-WEB '.$ref.'] '.get_class($e).': '.$e->getMessage().
+            ' at '.basename($e->getFile()).':'.$e->getLine());
+        if (!headers_sent()) http_response_code(503);
+        $path=(string)(parse_url($_SERVER['REQUEST_URI']??'/',PHP_URL_PATH)?:'/');
+        if($path==='/api.php') {
+            if(!headers_sent()) header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['error'=>'Dịch vụ đang gặp lỗi. Mã hỗ trợ: '.$ref],JSON_UNESCAPED_UNICODE);
+        } else {
+            if(!headers_sent())header('Content-Type: text/html; charset=utf-8');
+            echo '<!doctype html><html lang="vi"><meta charset="utf-8"><title>DNU Judge - Lỗi dịch vụ</title>';
+            echo '<body style="font:16px sans-serif;max-width:720px;margin:60px auto">';
+            echo '<h1>Dịch vụ đang gặp sự cố</h1><p>Hãy kiểm tra terminal PHP, PostgreSQL và thử lại.</p>';
+            echo '<p>Mã hỗ trợ: <code>'.htmlspecialchars($ref,ENT_QUOTES,'UTF-8').'</code></p>';
+            echo '<a href="/">Quay lại trang chủ</a></body></html>';
+        }
+    });
+}
 if (PHP_SAPI!=='cli' && session_status()===PHP_SESSION_NONE) {
     ini_set('session.use_strict_mode','1');
     ini_set('session.cookie_httponly','1');
@@ -36,13 +58,13 @@ function canViewSubmission(PgSql\Connection $c,int $viewerId,string $viewerRole,
 }
 function layoutStart(string $title):void {
     $a=auth(); $flash=$_SESSION['message']??null; unset($_SESSION['message']);
-    echo '<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'.h($title).' | DNU Judge</title><link rel="stylesheet" href="/style.css?v=2"></head><body>';
+    echo '<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'.h($title).' | DNU Judge</title><link rel="stylesheet" href="/style.css?v=3"></head><body>';
     echo '<header class="top"><div class="wrap nav"><a class="brand" href="/">&lt;/&gt; DNU <span>JUDGE</span></a><nav><a href="/">Bài tập</a>';
     if ($a) { echo '<a href="/dashboard.php">Tiến độ</a><a href="/history.php">Lịch sử</a>'; if ($a['role']!=='student') echo '<a href="/teacher.php">Quản lý</a>'; if ($a['role']==='admin') echo '<a href="/admin.php">Hệ thống</a>'; echo '<span class="user">'.h($a['display_name']).' · '.h($a['role']).'</span><form action="/logout.php" method="post" class="inline"><input type="hidden" name="csrf" value="'.h(csrf()).'"><button class="linkbtn">Đăng xuất</button></form>'; }
     else echo '<a href="/login.php">Đăng nhập</a>';
     echo '</nav></div></header><main class="wrap">';
     if ($flash) echo '<div class="alert">'.h($flash).'</div>';
 }
-function layoutEnd():void { echo '</main><footer class="wrap foot">DNU Judge · Dự án thực hành PHP + PostgreSQL · Kết quả dựa trên bộ ca thử, không chứng minh chương trình luôn đúng.</footer><script src="/app.js?v=2"></script></body></html>'; }
+function layoutEnd():void { echo '</main><footer class="wrap foot">DNU Judge · Dự án thực hành PHP + PostgreSQL · Kết quả dựa trên bộ ca thử, không chứng minh chương trình luôn đúng.</footer><script src="/app.js?v=3"></script></body></html>'; }
 function failure(string $message,int $code=400):never { http_response_code($code);layoutStart('Thông báo');echo '<section class="panel"><h2>'.h($message).'</h2><p><a href="/">Về danh sách bài</a></p></section>';layoutEnd();exit; }
 function jsonSend(array $data,int $status=200):never { http_response_code($status);header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');echo json_encode($data,JSON_UNESCAPED_UNICODE|JSON_INVALID_UTF8_SUBSTITUTE);exit; }

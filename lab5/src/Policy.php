@@ -6,6 +6,11 @@ final class Policy {
         if (trim($source)==='' || strlen($source)>65536 || str_contains($source,"\0"))
             throw new InvalidArgumentException('Mã nguồn trống hoặc vượt giới hạn 64 KiB');
     }
+    public static function checkDraft(string $language,string $source): void {
+        if (!in_array($language,['python','cpp'],true)) throw new InvalidArgumentException('Ngôn ngữ không hỗ trợ');
+        if (strlen($source)>65536 || str_contains($source,"\0"))
+            throw new InvalidArgumentException('Bản nháp vượt giới hạn 64 KiB hoặc có ký tự không hợp lệ');
+    }
     public static function equalOutput(string $a,string $b): bool {
         $norm=static fn(string $s):string => rtrim(str_replace(["\r\n","\r"],"\n",$s));
         return $norm($a)===$norm($b);

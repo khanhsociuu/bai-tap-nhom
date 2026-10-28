@@ -1,10 +1,20 @@
 (() => {
   const editor=document.getElementById('editor');
+  const parseApi=async (response)=>{
+    const body=await response.text();let data;
+    try { data=JSON.parse(body); }
+    catch (_) { throw new Error('API trả nội dung không hợp lệ (HTTP '+response.status+'). Kiểm tra terminal PHP và PostgreSQL.'); }
+    if(!response.ok)throw new Error(data.error||'Yêu cầu thất bại (HTTP '+response.status+')');
+    return data;
+  };
   const post=async (action,data) => {
     const response=await fetch('/api.php?action='+encodeURIComponent(action),{method:'POST',body:new URLSearchParams(data),headers:{'Accept':'application/json'}});
-    const result=await response.json();if(!response.ok)throw new Error(result.error||'Yêu cầu thất bại');return result;
+    return parseApi(response);
   };
-  const get=async(action,id)=>{const r=await fetch('/api.php?action='+encodeURIComponent(action)+'&id='+encodeURIComponent(id),{cache:'no-store'});const j=await r.json();if(!r.ok)throw new Error(j.error||'Không tải được dữ liệu');return j;};
+  const get=async(action,id)=>{
+    const response=await fetch('/api.php?action='+encodeURIComponent(action)+'&id='+encodeURIComponent(id),{cache:'no-store',headers:{'Accept':'application/json'}});
+    return parseApi(response);
+  };
   const pause=t=>new Promise(resolve=>setTimeout(resolve,t));
   if(editor){
     const problemId=editor.dataset.problem,csrf=editor.dataset.csrf;

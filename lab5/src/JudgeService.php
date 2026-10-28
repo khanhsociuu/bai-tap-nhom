@@ -104,7 +104,8 @@ final class JudgeService {
             return $this->complete((int)$run['id'],$run['lease_token'],$results,Policy::overall($labels));
         } catch(Throwable $e) {
             error_log('Judge worker: run '.$run['id'].' executor failure: '.$e->getMessage());
-            return $this->complete((int)$run['id'],$run['lease_token'],[], 'SYSTEM_ERROR',true);
+            // Preserve earlier case verdicts for operator audit, but never report a student's WA on executor failure.
+            return $this->complete((int)$run['id'],$run['lease_token'],$results, 'SYSTEM_ERROR',true);
         }
     }
 }

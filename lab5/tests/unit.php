@@ -21,6 +21,10 @@ foreach(['python','cpp'] as $lang) {
 foreach([['java','class A {}'],['python',''],['cpp',str_repeat('a',65537)],['python',"abc\0def"]] as [$l,$code]){
  try{Policy::checkSource($l,$code);check('reject invalid',false);}catch(InvalidArgumentException){check('reject invalid',true);}
 }
+try { Policy::checkDraft('python',''); check('Empty draft permitted',true); }
+catch(Throwable $e) { check('Empty draft permitted',false); }
+try { Policy::checkDraft('cpp',str_repeat('X',65537)); check('Oversized draft rejected',false); }
+catch(InvalidArgumentException $e) { check('Oversized draft rejected',true); }
 $public=Policy::publicRun(['id'=>5,'status'=>'done','verdict'=>'AC','lease_token'=>'SECRET','expected_output'=>'SECRET','input_data'=>'SECRET','stdout_data'=>'SECRET']);
 check('Status allowed',$public['status']==='done');
 check('Hidden fields filtered',!isset($public['input_data'])&&!isset($public['lease_token'])&&!isset($public['expected_output'])&&!isset($public['stdout_data']));

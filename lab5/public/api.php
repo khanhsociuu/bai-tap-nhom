@@ -10,7 +10,7 @@ try {
     if(!hash_equals(csrf(),(string)($_POST['csrf']??''))) jsonSend(['error'=>'CSRF không hợp lệ'],419);
     $pid=(int)($_POST['problem_id']??0);
     if ($action==='draft') {
-       Policy::checkSource((string)($_POST['language']??''),(string)($_POST['code']??''));
+       Policy::checkDraft((string)($_POST['language']??''),(string)($_POST['code']??''));
        if (!one($c,'SELECT 1 FROM problems WHERE id=$1 AND published=true',[$pid])) jsonSend(['error'=>'Bài tập không khả dụng'],404);
        queryParams($c,'INSERT INTO drafts(user_id,problem_id,language,code) VALUES($1,$2,$3,$4)
         ON CONFLICT(user_id,problem_id,language) DO UPDATE SET code=EXCLUDED.code,updated_at=now()',

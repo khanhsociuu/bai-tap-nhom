@@ -1,10 +1,16 @@
 # DNU JUDGE — Đề tài 20 / Phát triển phần mềm mã nguồn mở / Lab 05
 
 **Đề tài:** Xây dựng hệ thống luyện tập và chấm bài lập trình trực tuyến.  
-**Phiên bản:** 2.0 — nguyên mẫu thực hành chạy **cục bộ** bằng PHP 8.1+, PostgreSQL 14+, Docker và WSL/Ubuntu.  
+**Phiên bản:** 3.0 — nguyên mẫu thực hành chạy **cục bộ** bằng PHP 8.1+, PostgreSQL 14+, Docker và WSL/Ubuntu.  
 **Tài liệu nền:** Lab 05 `HUONG_DAN (3).md`: cấu hình `db()`, `queryParams()`, `schema.sql`, mô-đun Repository/Stats, khóa `UNIQUE`, phân biệt trùng và lỗi CSDL, kiểm thử bền vững, `LEFT JOIN`.
 
 > Dự án này là **phần chuyển đổi nghiệp vụ từ CommunityPass sang Online Judge**, không phải mã của CommunityPass. Không ghi đè tệp nguồn Lab05 gốc vì chưa được cung cấp. Có thể để nguyên thư mục gốc, đặt dự án này cạnh `Lab05/Ma_nguon` hoặc trong một thư mục con độc lập. **Không chạy `schema.sql` vào CSDL của bài Lab 05 cũ.**
+
+## CẬP NHẬT 3.0 — SỬA WORKER/DOCKER, KHÔNG MẤT DATABASE
+
+Xem **`HUONG_DAN_CAP_NHAT_V3.md`** để cập nhật an toàn và chạy 3 terminal; xem **`BAO_CAO_RA_SOAT_V3.md`** để biết các lỗi đã sửa và những phần chưa kiểm chứng trên Docker thực. Không cần `seed` hay chạy lại `schema` khi database đang có 10 bài và 71 test case.
+
+`bash lab.sh images` tải trước Docker images; `bash lab.sh doctor` chẩn đoán PostgreSQL, bảng, hàng đợi và image; `bash lab.sh smoke` kiểm tra Docker thực; `php tests/runner_contract.php` chạy mô phỏng không cần Docker daemon.
 
 ## CẬP NHẬT 2.0 — NÂNG CẤP KHÔNG MẤT DATABASE
 

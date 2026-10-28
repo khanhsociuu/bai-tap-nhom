@@ -20,7 +20,7 @@ final class TrialService {
         return one($this->c,"WITH next AS (
             SELECT id FROM trial_runs WHERE status='queued' OR (status='running' AND lease_until<now())
             ORDER BY id FOR UPDATE SKIP LOCKED LIMIT 1)
-            UPDATE trial_runs t SET status='running',lease_token=$1,lease_until=now()+interval '90 seconds',attempts=attempts+1
+            UPDATE trial_runs t SET status='running',lease_token=$1,lease_until=now()+interval '180 seconds',attempts=attempts+1
             FROM next WHERE t.id=next.id AND t.attempts<5 RETURNING t.*",[bin2hex(random_bytes(24))]);
     }
     public function process(array $trial,callable $executor): bool {
